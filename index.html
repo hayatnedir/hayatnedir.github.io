@@ -3,35 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Language Player</title>
+
+<title>Video Player</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
-  background: radial-gradient(circle at center, #111 0%, #000 100%);
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #000;
+  font-family: sans-serif;
   color: white;
-  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
 }
 
-/* Video */
-.video-container {
+/* FLAGS (artık overlay değil) */
+.flags {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 85%;
-  max-width: 1000px;
+  top: 20px;
+  right: 20px;
+
+  display: flex;
+  gap: 8px;
+
+  background: rgba(255,255,255,0.06);
+  padding: 10px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
 }
 
+/* FLAG */
+.flag {
+  width: 34px;
+  height: 22px;
+  cursor: pointer;
+  opacity: 0.6;
+  border-radius: 4px;
+  transition: 0.2s;
+}
+
+.flag:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.flag.active {
+  opacity: 1;
+  outline: 2px solid white;
+}
+
+/* VIDEO CONTAINER */
+.video-wrapper {
+  height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 🔥 EN KRİTİK FIX */
 video {
-  width: 100%;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  height: 100%;
+  width: auto;   /* <-- BU zoom problemini çözer */
+  max-width: 100%;
+  border-radius: 12px;
+
   opacity: 1;
   transition: opacity 0.4s ease;
 }
@@ -40,50 +78,17 @@ video.fade-out {
   opacity: 0;
 }
 
-/* Flags container */
-.flags {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  gap: 10px;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(10px);
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* Flag buttons */
-.flag {
-  width: 36px;
-  height: 24px;
-  border-radius: 6px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: all 0.25s ease;
-  border: 1px solid transparent;
-}
-
-.flag:hover {
-  opacity: 1;
-  transform: scale(1.08);
-}
-
-.flag.active {
-  opacity: 1;
-  transform: scale(1.1);
-  border: 1px solid rgba(255,255,255,0.6);
-  box-shadow: 0 0 10px rgba(255,255,255,0.4);
-}
-
-/* Mobile */
+/* MOBILE */
 @media (max-width: 600px) {
   .flags {
     top: auto;
     bottom: 20px;
     right: 50%;
     transform: translateX(50%);
+  }
+
+  .video-wrapper {
+    height: 85vh;
   }
 }
 </style>
@@ -92,18 +97,18 @@ video.fade-out {
 <body>
 
 <div class="flags">
-  <img class="flag active" src="https://flagcdn.com/w40/tr.png" title="Türkçe" onclick="changeVideo('tur.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/us.png" title="English" onclick="changeVideo('eng.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/fr.png" title="Français" onclick="changeVideo('fr.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/es.png" title="Español" onclick="changeVideo('spa.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/ru.png" title="Русский" onclick="changeVideo('rus.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/cn.png" title="中文" onclick="changeVideo('chi.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/de.png" title="Deutsch" onclick="changeVideo('ger.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/jp.png" title="日本語" onclick="changeVideo('jap.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/sa.png" title="العربية" onclick="changeVideo('arb.mp4', this)">
+  <img class="flag active" src="https://flagcdn.com/w40/tr.png" onclick="changeVideo('tur.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/us.png" onclick="changeVideo('eng.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/fr.png" onclick="changeVideo('fr.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/es.png" onclick="changeVideo('spa.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/ru.png" onclick="changeVideo('rus.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/cn.png" onclick="changeVideo('chi.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/de.png" onclick="changeVideo('ger.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/jp.png" onclick="changeVideo('jap.mp4', this)">
+  <img class="flag" src="https://flagcdn.com/w40/sa.png" onclick="changeVideo('arb.mp4', this)">
 </div>
 
-<div class="video-container">
+<div class="video-wrapper">
   <video id="videoPlayer" controls autoplay>
     <source src="tur.mp4" type="video/mp4">
   </video>
@@ -113,17 +118,16 @@ video.fade-out {
 let currentVideo = "tur.mp4";
 let isSwitching = false;
 
-function changeVideo(file, element) {
+function changeVideo(file, el) {
   if (file === currentVideo || isSwitching) return;
 
   const video = document.getElementById("videoPlayer");
   isSwitching = true;
 
-  // fade out
   video.classList.add("fade-out");
 
   setTimeout(() => {
-    video.src = "videos/" + file;
+    video.src = file;
     video.load();
 
     video.onloadeddata = () => {
@@ -131,11 +135,10 @@ function changeVideo(file, element) {
       video.classList.remove("fade-out");
       isSwitching = false;
     };
-  }, 300);
+  }, 250);
 
-  // aktif flag
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
-  element.classList.add("active");
+  el.classList.add("active");
 
   currentVideo = file;
 }
