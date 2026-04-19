@@ -65,13 +65,14 @@ video {
   border-radius: 12px;
   opacity: 1;
   transition: opacity 0.3s ease;
+  cursor: pointer;
 }
 
 video.fade-out {
   opacity: 0;
 }
 
-/* 🔥 LOADER */
+/* LOADER */
 .loader {
   position: absolute;
   width: 70px;
@@ -82,7 +83,6 @@ video.fade-out {
   animation: spin 0.8s linear infinite;
   opacity: 0;
   pointer-events: none;
-  transition: 0.2s;
 }
 
 .loader.active {
@@ -107,68 +107,120 @@ video.fade-out {
 
 <body>
 
-<div class="flags">
-  <img class="flag active" src="https://flagcdn.com/w40/tr.png" onclick="changeVideo('tur.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/us.png" onclick="changeVideo('eng.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/fr.png" onclick="changeVideo('fr.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/es.png" onclick="changeVideo('spa.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/ru.png" onclick="changeVideo('rus.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/cn.png" onclick="changeVideo('chi.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/de.png" onclick="changeVideo('ger.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/jp.png" onclick="changeVideo('jap.mp4', this)">
-  <img class="flag" src="https://flagcdn.com/w40/sa.png" onclick="changeVideo('arb.mp4', this)">
-</div>
+<div class="flags" id="flagsContainer"></div>
 
 <div class="video-wrapper">
-  <video id="videoPlayer" autoplay muted loop playsinline>
-    <source src="tur.mp4" type="video/mp4">
-  </video>
-
+  <video id="videoPlayer" loop playsinline></video>
   <div id="loader" class="loader"></div>
 </div>
 
 <script>
-let currentVideo = "tur.mp4";
+const videoList = [
+  { file: "tur.mp4", flag: "tr" },
+  { file: "eng.mp4", flag: "us" },
+  { file: "fr.mp4", flag: "fr" },
+  { file: "spa.mp4", flag: "es" },
+  { file: "rus.mp4", flag: "ru" },
+  { file: "chi.mp4", flag: "cn" },
+  { file: "ger.mp4", flag: "de" },
+  { file: "jap.mp4", flag: "jp" },
+  { file: "arb.mp4", flag: "sa" }
+];
+
+let currentIndex = 0;
 let isSwitching = false;
 
 const video = document.getElementById("videoPlayer");
 const loader = document.getElementById("loader");
+const flagsContainer = document.getElementById("flagsContainer");
 
-/* 🔥 İlk giriş autoplay fix (browser politikaları için) */
-window.addEventListener("load", () => {
-  video.play().catch(() => {});
+/* FLAGS RENDER */
+videoList.forEach((v, i) => {
+  const img = document.createElement("img");
+  img.src = `https://flagcdn.com/w40/${v.flag}.png`;
+  img.className = "flag" + (i === 0 ? " active" : "");
+  img.onclick = () => switchVideo(i);
+  flagsContainer.appendChild(img);
 });
 
-function changeVideo(file, el) {
-  if (file === currentVideo || isSwitching) return;
+/* İLK VIDEO */
+video.src = videoList[0].file;
+
+/* PLAY ON CLICK */
+video.addEventListener("click", () => {
+  video.play();
+});
+
+/* VIDEO SWITCH */
+function switchVideo(index) {
+  if (index === currentIndex || isSwitching) return;
 
   isSwitching = true;
-
-  // loader aç
   loader.classList.add("active");
-
-  // fade out
   video.classList.add("fade-out");
 
   setTimeout(() => {
-    video.src = file;
+    video.src = videoList[index].file;
     video.load();
 
     video.onloadeddata = () => {
       video.play();
-
       video.classList.remove("fade-out");
       loader.classList.remove("active");
-
       isSwitching = false;
     };
   }, 250);
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
-  el.classList.add("active");
+  flagsContainer.children[index].classList.add("active");
 
-  currentVideo = file;
+  currentIndex = index;
 }
+
+/* SWIPE DETECTION */
+let startX = 0;
+
+video.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
+});
+
+video.addEventListener("touchend", e => {
+  let endX = e.changedTouches[0].clientX;
+  let diff = startX - endX;
+
+  if (Math.abs(diff) > 50) {
+    if (diff > 0) {
+      // sağa swipe → next
+      switchVideo((currentIndex + 1) % videoList.length);
+    } else {
+      // sola swipe → prev
+      switchVideo((currentIndex - 1 + videoList.length) % videoList.length);
+    }
+  }
+});
+
+/* DESKTOP DRAG (bonus) */
+let mouseDown = false;
+
+video.addEventListener("mousedown", e => {
+  mouseDown = true;
+  startX = e.clientX;
+});
+
+video.addEventListener("mouseup", e => {
+  if (!mouseDown) return;
+  mouseDown = false;
+
+  let diff = startX - e.clientX;
+
+  if (Math.abs(diff) > 50) {
+    if (diff > 0) {
+      switchVideo((currentIndex + 1) % videoList.length);
+    } else {
+      switchVideo((currentIndex - 1 + videoList.length) % videoList.length);
+    }
+  }
+});
 </script>
 
 </body>
