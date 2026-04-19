@@ -21,83 +21,74 @@ body {
 /* FLAGS */
 .flags {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 12px;
+  right: 12px;
   display: flex;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  z-index: 10;
 }
 
 .flag {
-  width: 34px;
-  height: 22px;
+  width: 30px;
+  height: 20px;
   cursor: pointer;
   opacity: 0.6;
-  transition: 0.2s;
   border-radius: 4px;
 }
 
-.flag:hover { opacity: 1; transform: scale(1.1); }
-.flag.active { opacity: 1; outline: 2px solid white; }
-
-/* VIDEO WRAPPER */
-.video-wrapper {
-  height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+.flag.active {
+  opacity: 1;
+  outline: 2px solid white;
 }
 
-/* ✂️ crop */
+/* VIDEO AREA */
+.video-wrapper {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .video-mask {
   height: 100%;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
+/* 🔥 FIXED scaling */
 video {
-  height: 110%; /* kırpma efekti */
+  height: 100%;
   width: auto;
   max-width: 100%;
-  border-radius: 12px;
-  transition: transform 0.2s ease, opacity 0.3s ease;
-  cursor: pointer;
-}
-
-/* SLIDE EFFECT */
-video.dragging {
-  transition: none;
+  object-fit: cover;
+  transform: scale(1.08); /* crop */
+  transition: transform 0.2s ease, opacity 0.25s ease;
 }
 
 /* PLAY BUTTON */
 .play-btn {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.12);
   backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.play-btn:hover {
-  transform: scale(1.1);
 }
 
 .play-btn::after {
   content: '';
   border-style: solid;
-  border-width: 12px 0 12px 20px;
+  border-width: 10px 0 10px 18px;
   border-color: transparent transparent transparent white;
 }
 
@@ -109,8 +100,8 @@ video.dragging {
 /* LOADER */
 .loader {
   position: absolute;
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.1);
   border-top: 3px solid white;
@@ -124,12 +115,17 @@ video.dragging {
   to { transform: rotate(360deg); }
 }
 
+/* MOBILE FIX */
 @media (max-width: 600px) {
   .flags {
+    bottom: 15px;
     top: auto;
-    bottom: 20px;
     right: 50%;
     transform: translateX(50%);
+  }
+
+  video {
+    transform: scale(1.1);
   }
 }
 </style>
@@ -141,7 +137,7 @@ video.dragging {
 
 <div class="video-wrapper">
   <div class="video-mask">
-    <video id="videoPlayer" loop playsinline></video>
+    <video id="videoPlayer" loop playsinline preload="auto"></video>
   </div>
 
   <div id="playBtn" class="play-btn"></div>
@@ -169,12 +165,6 @@ const loader = document.getElementById("loader");
 const flagsContainer = document.getElementById("flagsContainer");
 const playBtn = document.getElementById("playBtn");
 
-/* PRELOAD */
-videoList.forEach(v => {
-  const vid = document.createElement("video");
-  vid.src = v.file;
-});
-
 /* FLAGS */
 videoList.forEach((v, i) => {
   const img = document.createElement("img");
@@ -184,14 +174,39 @@ videoList.forEach((v, i) => {
   flagsContainer.appendChild(img);
 });
 
-/* INIT */
+/* INIT (sadece ilk video) */
 video.src = videoList[0].file;
 
 /* PLAY */
 playBtn.onclick = () => {
   video.play();
   playBtn.classList.add("hidden");
+
+  startBackgroundPreload(); // 🔥 sadece play sonrası preload
 };
+
+/* BACKGROUND PRELOAD (SMOOTH) */
+function startBackgroundPreload() {
+  let i = 1;
+
+  function preloadNext() {
+    if (i >= videoList.length) return;
+
+    const v = document.createElement("video");
+    v.src = videoList[i].file;
+    v.preload = "auto";
+
+    i++;
+
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(preloadNext);
+    } else {
+      setTimeout(preloadNext, 500);
+    }
+  }
+
+  preloadNext();
+}
 
 /* SWITCH */
 function switchVideo(index) {
@@ -212,79 +227,13 @@ function switchVideo(index) {
       loader.classList.remove("active");
       isSwitching = false;
     };
-  }, 200);
+  }, 150);
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
   flagsContainer.children[index].classList.add("active");
 
   currentIndex = index;
 }
-
-/* SWIPE + PREVIEW */
-let startX = 0;
-let currentX = 0;
-let dragging = false;
-
-video.addEventListener("touchstart", e => {
-  startX = e.touches[0].clientX;
-  dragging = true;
-  video.classList.add("dragging");
-});
-
-video.addEventListener("touchmove", e => {
-  if (!dragging) return;
-  currentX = e.touches[0].clientX;
-  let diff = currentX - startX;
-  video.style.transform = `translateX(${diff}px)`;
-});
-
-video.addEventListener("touchend", e => {
-  dragging = false;
-  video.classList.remove("dragging");
-
-  let diff = currentX - startX;
-
-  if (Math.abs(diff) > 80) {
-    if (diff < 0) {
-      switchVideo((currentIndex + 1) % videoList.length);
-    } else {
-      switchVideo((currentIndex - 1 + videoList.length) % videoList.length);
-    }
-  }
-
-  video.style.transform = "translateX(0)";
-});
-
-/* DESKTOP DRAG */
-video.addEventListener("mousedown", e => {
-  dragging = true;
-  startX = e.clientX;
-  video.classList.add("dragging");
-});
-
-window.addEventListener("mousemove", e => {
-  if (!dragging) return;
-  let diff = e.clientX - startX;
-  video.style.transform = `translateX(${diff}px)`;
-});
-
-window.addEventListener("mouseup", e => {
-  if (!dragging) return;
-  dragging = false;
-  video.classList.remove("dragging");
-
-  let diff = e.clientX - startX;
-
-  if (Math.abs(diff) > 80) {
-    if (diff < 0) {
-      switchVideo((currentIndex + 1) % videoList.length);
-    } else {
-      switchVideo((currentIndex - 1 + videoList.length) % videoList.length);
-    }
-  }
-
-  video.style.transform = "translateX(0)";
-});
 </script>
 
 </body>
