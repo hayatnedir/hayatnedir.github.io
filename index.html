@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi Language Video</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .video-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 900px;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+
+    .flags {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .flags img {
+      width: 32px;
+      height: 22px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: 0.2s;
+      border-radius: 3px;
+    }
+
+    .flags img:hover {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    .active {
+      outline: 2px solid white;
+      opacity: 1 !important;
+    }
+  </style>
+</head>
+<body>
+
+<div class="flags">
+  <img src="https://flagcdn.com/w40/tr.png" onclick="changeVideo('tur.mp4', this)" class="active">
+  <img src="https://flagcdn.com/w40/us.png" onclick="changeVideo('eng.mp4', this)">
+  <img src="https://flagcdn.com/w40/fr.png" onclick="changeVideo('fr.mp4', this)">
+  <img src="https://flagcdn.com/w40/es.png" onclick="changeVideo('spa.mp4', this)">
+  <img src="https://flagcdn.com/w40/ru.png" onclick="changeVideo('rus.mp4', this)">
+  <img src="https://flagcdn.com/w40/cn.png" onclick="changeVideo('chi.mp4', this)">
+  <img src="https://flagcdn.com/w40/de.png" onclick="changeVideo('ger.mp4', this)">
+  <img src="https://flagcdn.com/w40/jp.png" onclick="changeVideo('jap.mp4', this)">
+  <img src="https://flagcdn.com/w40/sa.png" onclick="changeVideo('arb.mp4', this)">
+</div>
+
+<div class="video-container">
+  <video id="videoPlayer" controls autoplay>
+    <source src="videos/tur.mp4" type="video/mp4">
+  </video>
+</div>
+
+<script>
+  function changeVideo(file, element) {
+    const video = document.getElementById("videoPlayer");
+    
+    video.src = "videos/" + file;
+    video.load();
+    video.play();
+
+    // aktif flag
+    document.querySelectorAll(".flags img").forEach(img => {
+      img.classList.remove("active");
+    });
+    element.classList.add("active");
+  }
+</script>
+
+</body>
+</html>
