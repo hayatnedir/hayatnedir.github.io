@@ -11,38 +11,33 @@ body {
   margin: 0;
   background: #000;
   font-family: sans-serif;
-  color: white;
-
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 100vh;
+  color: white;
 }
 
-/* FLAGS (artık overlay değil) */
+/* FLAGS */
 .flags {
   position: absolute;
   top: 20px;
   right: 20px;
-
   display: flex;
   gap: 8px;
-
-  background: rgba(255,255,255,0.06);
   padding: 10px;
   border-radius: 12px;
+  background: rgba(255,255,255,0.05);
   backdrop-filter: blur(10px);
 }
 
-/* FLAG */
 .flag {
   width: 34px;
   height: 22px;
   cursor: pointer;
   opacity: 0.6;
-  border-radius: 4px;
   transition: 0.2s;
+  border-radius: 4px;
 }
 
 .flag:hover {
@@ -55,7 +50,7 @@ body {
   outline: 2px solid white;
 }
 
-/* VIDEO CONTAINER */
+/* VIDEO */
 .video-wrapper {
   height: 90vh;
   display: flex;
@@ -63,19 +58,39 @@ body {
   justify-content: center;
 }
 
-/* 🔥 EN KRİTİK FIX */
 video {
   height: 100%;
-  width: auto;   /* <-- BU zoom problemini çözer */
+  width: auto;
   max-width: 100%;
   border-radius: 12px;
-
   opacity: 1;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.3s ease;
 }
 
 video.fade-out {
   opacity: 0;
+}
+
+/* 🔥 LOADER */
+.loader {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top: 3px solid white;
+  animation: spin 0.8s linear infinite;
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
+}
+
+.loader.active {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* MOBILE */
@@ -85,10 +100,6 @@ video.fade-out {
     bottom: 20px;
     right: 50%;
     transform: translateX(50%);
-  }
-
-  .video-wrapper {
-    height: 85vh;
   }
 }
 </style>
@@ -109,21 +120,34 @@ video.fade-out {
 </div>
 
 <div class="video-wrapper">
-  <video id="videoPlayer" controls autoplay>
+  <video id="videoPlayer" autoplay muted loop playsinline>
     <source src="tur.mp4" type="video/mp4">
   </video>
+
+  <div id="loader" class="loader"></div>
 </div>
 
 <script>
 let currentVideo = "tur.mp4";
 let isSwitching = false;
 
+const video = document.getElementById("videoPlayer");
+const loader = document.getElementById("loader");
+
+/* 🔥 İlk giriş autoplay fix (browser politikaları için) */
+window.addEventListener("load", () => {
+  video.play().catch(() => {});
+});
+
 function changeVideo(file, el) {
   if (file === currentVideo || isSwitching) return;
 
-  const video = document.getElementById("videoPlayer");
   isSwitching = true;
 
+  // loader aç
+  loader.classList.add("active");
+
+  // fade out
   video.classList.add("fade-out");
 
   setTimeout(() => {
@@ -132,7 +156,10 @@ function changeVideo(file, el) {
 
     video.onloadeddata = () => {
       video.play();
+
       video.classList.remove("fade-out");
+      loader.classList.remove("active");
+
       isSwitching = false;
     };
   }, 250);
