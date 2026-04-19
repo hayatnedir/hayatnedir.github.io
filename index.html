@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Video Player</title>
 
 <style>
@@ -16,6 +15,7 @@ body {
   align-items: center;
   height: 100vh;
   color: white;
+  overflow: hidden;
 }
 
 /* FLAGS */
@@ -40,60 +40,90 @@ body {
   border-radius: 4px;
 }
 
-.flag:hover {
-  opacity: 1;
-  transform: scale(1.1);
-}
+.flag:hover { opacity: 1; transform: scale(1.1); }
+.flag.active { opacity: 1; outline: 2px solid white; }
 
-.flag.active {
-  opacity: 1;
-  outline: 2px solid white;
-}
-
-/* VIDEO */
+/* VIDEO WRAPPER */
 .video-wrapper {
   height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ✂️ crop */
+.video-mask {
+  height: 100%;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 video {
-  height: 100%;
+  height: 110%; /* kırpma efekti */
   width: auto;
   max-width: 100%;
   border-radius: 12px;
-  opacity: 1;
-  transition: opacity 0.3s ease;
+  transition: transform 0.2s ease, opacity 0.3s ease;
   cursor: pointer;
 }
 
-video.fade-out {
+/* SLIDE EFFECT */
+video.dragging {
+  transition: none;
+}
+
+/* PLAY BUTTON */
+.play-btn {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.play-btn:hover {
+  transform: scale(1.1);
+}
+
+.play-btn::after {
+  content: '';
+  border-style: solid;
+  border-width: 12px 0 12px 20px;
+  border-color: transparent transparent transparent white;
+}
+
+.play-btn.hidden {
   opacity: 0;
+  pointer-events: none;
 }
 
 /* LOADER */
 .loader {
   position: absolute;
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   border: 3px solid rgba(255,255,255,0.1);
   border-top: 3px solid white;
   animation: spin 0.8s linear infinite;
   opacity: 0;
-  pointer-events: none;
 }
 
-.loader.active {
-  opacity: 1;
-}
+.loader.active { opacity: 1; }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* MOBILE */
 @media (max-width: 600px) {
   .flags {
     top: auto;
@@ -110,7 +140,11 @@ video.fade-out {
 <div class="flags" id="flagsContainer"></div>
 
 <div class="video-wrapper">
-  <video id="videoPlayer" loop playsinline></video>
+  <div class="video-mask">
+    <video id="videoPlayer" loop playsinline></video>
+  </div>
+
+  <div id="playBtn" class="play-btn"></div>
   <div id="loader" class="loader"></div>
 </div>
 
@@ -133,8 +167,15 @@ let isSwitching = false;
 const video = document.getElementById("videoPlayer");
 const loader = document.getElementById("loader");
 const flagsContainer = document.getElementById("flagsContainer");
+const playBtn = document.getElementById("playBtn");
 
-/* FLAGS RENDER */
+/* PRELOAD */
+videoList.forEach(v => {
+  const vid = document.createElement("video");
+  vid.src = v.file;
+});
+
+/* FLAGS */
 videoList.forEach((v, i) => {
   const img = document.createElement("img");
   img.src = `https://flagcdn.com/w40/${v.flag}.png`;
@@ -143,21 +184,23 @@ videoList.forEach((v, i) => {
   flagsContainer.appendChild(img);
 });
 
-/* İLK VIDEO */
+/* INIT */
 video.src = videoList[0].file;
 
-/* PLAY ON CLICK */
-video.addEventListener("click", () => {
+/* PLAY */
+playBtn.onclick = () => {
   video.play();
-});
+  playBtn.classList.add("hidden");
+};
 
-/* VIDEO SWITCH */
+/* SWITCH */
 function switchVideo(index) {
   if (index === currentIndex || isSwitching) return;
 
   isSwitching = true;
   loader.classList.add("active");
-  video.classList.add("fade-out");
+
+  video.style.opacity = 0;
 
   setTimeout(() => {
     video.src = videoList[index].file;
@@ -165,11 +208,11 @@ function switchVideo(index) {
 
     video.onloadeddata = () => {
       video.play();
-      video.classList.remove("fade-out");
+      video.style.opacity = 1;
       loader.classList.remove("active");
       isSwitching = false;
     };
-  }, 250);
+  }, 200);
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
   flagsContainer.children[index].classList.add("active");
@@ -177,49 +220,70 @@ function switchVideo(index) {
   currentIndex = index;
 }
 
-/* SWIPE DETECTION */
+/* SWIPE + PREVIEW */
 let startX = 0;
+let currentX = 0;
+let dragging = false;
 
 video.addEventListener("touchstart", e => {
   startX = e.touches[0].clientX;
+  dragging = true;
+  video.classList.add("dragging");
+});
+
+video.addEventListener("touchmove", e => {
+  if (!dragging) return;
+  currentX = e.touches[0].clientX;
+  let diff = currentX - startX;
+  video.style.transform = `translateX(${diff}px)`;
 });
 
 video.addEventListener("touchend", e => {
-  let endX = e.changedTouches[0].clientX;
-  let diff = startX - endX;
+  dragging = false;
+  video.classList.remove("dragging");
 
-  if (Math.abs(diff) > 50) {
-    if (diff > 0) {
-      // sağa swipe → next
+  let diff = currentX - startX;
+
+  if (Math.abs(diff) > 80) {
+    if (diff < 0) {
       switchVideo((currentIndex + 1) % videoList.length);
     } else {
-      // sola swipe → prev
       switchVideo((currentIndex - 1 + videoList.length) % videoList.length);
     }
   }
+
+  video.style.transform = "translateX(0)";
 });
 
-/* DESKTOP DRAG (bonus) */
-let mouseDown = false;
-
+/* DESKTOP DRAG */
 video.addEventListener("mousedown", e => {
-  mouseDown = true;
+  dragging = true;
   startX = e.clientX;
+  video.classList.add("dragging");
 });
 
-video.addEventListener("mouseup", e => {
-  if (!mouseDown) return;
-  mouseDown = false;
+window.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  let diff = e.clientX - startX;
+  video.style.transform = `translateX(${diff}px)`;
+});
 
-  let diff = startX - e.clientX;
+window.addEventListener("mouseup", e => {
+  if (!dragging) return;
+  dragging = false;
+  video.classList.remove("dragging");
 
-  if (Math.abs(diff) > 50) {
-    if (diff > 0) {
+  let diff = e.clientX - startX;
+
+  if (Math.abs(diff) > 80) {
+    if (diff < 0) {
       switchVideo((currentIndex + 1) % videoList.length);
     } else {
       switchVideo((currentIndex - 1 + videoList.length) % videoList.length);
     }
   }
+
+  video.style.transform = "translateX(0)";
 });
 </script>
 
