@@ -3,27 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ultra Video Player</title>
+<title>Multi Audio Player</title>
 
 <style>
 body {
   margin: 0;
-  background: #000;
+  background: black;
   overflow: hidden;
 }
 
 video {
-  position: absolute;
   width: 100%;
   height: 100vh;
   object-fit: cover;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-video.active {
-  opacity: 1;
-  z-index: 1;
 }
 
 .flags {
@@ -39,7 +31,6 @@ video.active {
 
 .flag {
   width: 30px;
-  height: 20px;
   cursor: pointer;
   opacity: 0.5;
 }
@@ -79,45 +70,38 @@ video.active {
 
 <body>
 
+<video id="video" src="tur.mp4" playsinline preload="auto"></video>
+
 <div class="flags" id="flags"></div>
 <div id="playBtn" class="play-btn"></div>
 
 <script>
-const videoList = [
-  { file: "tur.mp4", flag: "tr" },
-  { file: "eng.mp4", flag: "us" },
-  { file: "fr.mp4", flag: "fr" },
-  { file: "spa.mp4", flag: "es" },
-  { file: "rus.mp4", flag: "ru" },
-  { file: "chi.mp4", flag: "cn" },
-  { file: "ger.mp4", flag: "de" },
-  { file: "jap.mp4", flag: "jp" },
-  { file: "arb.mp4", flag: "sa" }
+const langs = [
+  { code: "tr", file: "tr.mp3" },
+  { code: "us", file: "eng.mp3" },
+  { code: "fr", file: "fr.mp3" },
+  { code: "es", file: "spa.mp3" },
+  { code: "ru", file: "rus.mp3" },
+  { code: "cn", file: "chi.mp3" },
+  { code: "de", file: "ger.mp3" },
+  { code: "jp", file: "jap.mp3" },
+  { code: "sa", file: "arb.mp3" }
 ];
 
-const flags = document.getElementById("flags");
+const video = document.getElementById("video");
 const playBtn = document.getElementById("playBtn");
+const flags = document.getElementById("flags");
 
-let videos = [];
+let audio = new Audio(langs[0].file);
 let current = 0;
 let started = false;
 
-/* 🔥 VIDEOLAR OLUŞTUR (PRELOAD READY) */
-videoList.forEach((v, i) => {
-  const vid = document.createElement("video");
-  vid.src = v.file;
-  vid.loop = true;
-  vid.playsInline = true;
-  vid.preload = "auto";
-
-  document.body.appendChild(vid);
-  videos.push(vid);
-
+/* FLAGS */
+langs.forEach((l, i) => {
   const img = document.createElement("img");
-  img.src = `https://flagcdn.com/w40/${v.flag}.png`;
+  img.src = `https://flagcdn.com/w40/${l.code}.png`;
   img.className = "flag" + (i === 0 ? " active" : "");
-  img.onclick = () => switchVideo(i);
-
+  img.onclick = () => switchLang(i);
   flags.appendChild(img);
 });
 
@@ -125,27 +109,40 @@ videoList.forEach((v, i) => {
 playBtn.onclick = async () => {
   started = true;
 
-  for (let v of videos) {
-    v.muted = false;
-    v.volume = 1;
+  video.muted = true; // video sesi kapalı (audio ayrı)
+  audio.muted = false;
+
+  try {
+    await video.play();
+    await audio.play();
+  } catch (e) {
+    console.error(e);
   }
 
-  await Promise.all(
-    videos.map(v =>
-      v.play().catch(() => {})
-    )
-  );
-
-  videos[0].classList.add("active");
   playBtn.classList.add("hidden");
 };
 
-/* 🔥 SWITCH (ANLIK) */
-function switchVideo(i) {
+/* 🔥 SYNC */
+video.addEventListener("timeupdate", () => {
+  if (Math.abs(video.currentTime - audio.currentTime) > 0.3) {
+    audio.currentTime = video.currentTime;
+  }
+});
+
+/* 🔥 LANG SWITCH */
+function switchLang(i) {
   if (i === current) return;
 
-  videos[current].classList.remove("active");
-  videos[i].classList.add("active");
+  const newAudio = new Audio(langs[i].file);
+
+  newAudio.currentTime = video.currentTime;
+
+  if (started) {
+    newAudio.play();
+  }
+
+  audio.pause();
+  audio = newAudio;
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
   flags.children[i].classList.add("active");
