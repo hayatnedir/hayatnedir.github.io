@@ -18,7 +18,6 @@ body {
   overflow: hidden;
 }
 
-/* FLAGS */
 .flags {
   position: absolute;
   top: 12px;
@@ -45,7 +44,6 @@ body {
   outline: 2px solid white;
 }
 
-/* VIDEO AREA */
 .video-wrapper {
   width: 100%;
   height: 100vh;
@@ -62,17 +60,15 @@ body {
   overflow: hidden;
 }
 
-/* 🔥 FIXED scaling */
 video {
   height: 100%;
   width: auto;
   max-width: 100%;
   object-fit: cover;
-  transform: scale(1.08); /* crop */
+  transform: scale(1.08);
   transition: transform 0.2s ease, opacity 0.25s ease;
 }
 
-/* PLAY BUTTON */
 .play-btn {
   position: absolute;
   width: 70px;
@@ -97,7 +93,6 @@ video {
   pointer-events: none;
 }
 
-/* LOADER */
 .loader {
   position: absolute;
   width: 50px;
@@ -115,7 +110,6 @@ video {
   to { transform: rotate(360deg); }
 }
 
-/* MOBILE FIX */
 @media (max-width: 600px) {
   .flags {
     bottom: 15px;
@@ -137,7 +131,8 @@ video {
 
 <div class="video-wrapper">
   <div class="video-mask">
-    <video id="videoPlayer" loop playsinline preload="auto"></video>
+    <!-- 🔥 muted ekledik (kritik) -->
+    <video id="videoPlayer" loop playsinline preload="auto" muted></video>
   </div>
 
   <div id="playBtn" class="play-btn"></div>
@@ -174,18 +169,28 @@ videoList.forEach((v, i) => {
   flagsContainer.appendChild(img);
 });
 
-/* INIT (sadece ilk video) */
+/* INIT */
 video.src = videoList[0].file;
 
-/* PLAY */
+/* 🔥 PLAY FIX */
 playBtn.onclick = () => {
-  video.play();
-  playBtn.classList.add("hidden");
+  loader.classList.add("active");
 
-  startBackgroundPreload(); // 🔥 sadece play sonrası preload
+  // video hazır olana kadar bekle
+  video.addEventListener("canplay", () => {
+    video.play()
+      .then(() => {
+        playBtn.classList.add("hidden");
+        loader.classList.remove("active");
+        startBackgroundPreload();
+      })
+      .catch(err => console.error(err));
+  }, { once: true });
+
+  video.load(); // önemli
 };
 
-/* BACKGROUND PRELOAD (SMOOTH) */
+/* PRELOAD */
 function startBackgroundPreload() {
   let i = 1;
 
@@ -221,12 +226,13 @@ function switchVideo(index) {
     video.src = videoList[index].file;
     video.load();
 
-    video.onloadeddata = () => {
+    video.addEventListener("loadeddata", () => {
       video.play();
       video.style.opacity = 1;
       loader.classList.remove("active");
       isSwitching = false;
-    };
+    }, { once: true });
+
   }, 150);
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
