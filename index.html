@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi Audio Player</title>
+<title>Fixed Player</title>
 
 <style>
 body {
@@ -12,12 +12,24 @@ body {
   overflow: hidden;
 }
 
-video {
+/* 🔥 ORAN FIX */
+.video-wrap {
+  position: absolute;
   width: 100%;
-  height: 100vh;
-  object-fit: cover;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 🔥 ORAN BOZULMAZ */
+  background: black;
+}
+
+/* FLAGS */
 .flags {
   position: absolute;
   top: 10px;
@@ -25,14 +37,14 @@ video {
   display: flex;
   gap: 6px;
   padding: 8px;
-  border-radius: 10px;
   background: rgba(255,255,255,0.05);
+  border-radius: 10px;
 }
 
 .flag {
   width: 30px;
-  cursor: pointer;
   opacity: 0.5;
+  cursor: pointer;
 }
 
 .flag.active {
@@ -40,12 +52,13 @@ video {
   outline: 2px solid white;
 }
 
+/* PLAY */
 .play-btn {
   position: absolute;
   width: 80px;
   height: 80px;
-  border-radius: 50%;
   background: rgba(255,255,255,0.2);
+  border-radius: 50%;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -70,7 +83,9 @@ video {
 
 <body>
 
-<video id="video" src="tur.mp4" playsinline preload="auto"></video>
+<div class="video-wrap">
+  <video id="video" src="tur.mp4" playsinline preload="auto"></video>
+</div>
 
 <div class="flags" id="flags"></div>
 <div id="playBtn" class="play-btn"></div>
@@ -93,8 +108,10 @@ const playBtn = document.getElementById("playBtn");
 const flags = document.getElementById("flags");
 
 let audio = new Audio(langs[0].file);
-let current = 0;
+audio.preload = "auto";
+
 let started = false;
+let current = 0;
 
 /* FLAGS */
 langs.forEach((l, i) => {
@@ -105,41 +122,40 @@ langs.forEach((l, i) => {
   flags.appendChild(img);
 });
 
-/* 🔥 PLAY */
+/* 🔥 PLAY FIX (SES GARANTİ) */
 playBtn.onclick = async () => {
-  started = true;
-
-  video.muted = true; // video sesi kapalı (audio ayrı)
-  audio.muted = false;
-
   try {
+    video.muted = true; // video sessiz
     await video.play();
-    await audio.play();
-  } catch (e) {
-    console.error(e);
-  }
 
-  playBtn.classList.add("hidden");
+    audio = new Audio(langs[current].file);
+    audio.currentTime = video.currentTime;
+
+    await audio.play();
+
+    started = true;
+    playBtn.classList.add("hidden");
+
+  } catch (e) {
+    console.error("PLAY ERROR:", e);
+  }
 };
 
 /* 🔥 SYNC */
 video.addEventListener("timeupdate", () => {
-  if (Math.abs(video.currentTime - audio.currentTime) > 0.3) {
+  if (started && Math.abs(video.currentTime - audio.currentTime) > 0.25) {
     audio.currentTime = video.currentTime;
   }
 });
 
-/* 🔥 LANG SWITCH */
+/* 🔥 LANGUAGE SWITCH */
 function switchLang(i) {
   if (i === current) return;
 
   const newAudio = new Audio(langs[i].file);
-
   newAudio.currentTime = video.currentTime;
 
-  if (started) {
-    newAudio.play();
-  }
+  if (started) newAudio.play();
 
   audio.pause();
   audio = newAudio;
