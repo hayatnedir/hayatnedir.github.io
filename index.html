@@ -3,36 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Video Player</title>
+<title>Ultra Video Player</title>
 
 <style>
 body {
   margin: 0;
   background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
   overflow: hidden;
+}
+
+video {
+  position: absolute;
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+video.active {
+  opacity: 1;
+  z-index: 1;
 }
 
 .flags {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   display: flex;
   gap: 6px;
   padding: 8px;
   border-radius: 10px;
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(8px);
 }
 
 .flag {
   width: 30px;
   height: 20px;
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .flag.active {
@@ -40,102 +49,108 @@ body {
   outline: 2px solid white;
 }
 
-video {
-  height: 100vh;
-  object-fit: cover;
-}
-
 .play-btn {
   position: absolute;
-  width: 70px;
-  height: 70px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: rgba(255,255,255,0.2);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .play-btn::after {
   content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-40%, -50%);
   border-style: solid;
-  border-width: 10px 0 10px 18px;
+  border-width: 12px 0 12px 20px;
   border-color: transparent transparent transparent white;
 }
 
 .play-btn.hidden {
-  opacity: 0;
-  pointer-events: none;
+  display: none;
 }
 </style>
 </head>
 
 <body>
 
-<div class="flags" id="flagsContainer"></div>
-
-<video id="videoPlayer" loop playsinline preload="auto"></video>
+<div class="flags" id="flags"></div>
 <div id="playBtn" class="play-btn"></div>
 
 <script>
 const videoList = [
   { file: "tur.mp4", flag: "tr" },
   { file: "eng.mp4", flag: "us" },
-  { file: "fr.mp4", flag: "fr" }
+  { file: "fr.mp4", flag: "fr" },
+  { file: "spa.mp4", flag: "es" },
+  { file: "rus.mp4", flag: "ru" },
+  { file: "chi.mp4", flag: "cn" },
+  { file: "ger.mp4", flag: "de" },
+  { file: "jap.mp4", flag: "jp" },
+  { file: "arb.mp4", flag: "sa" }
 ];
 
-let currentIndex = 0;
-let hasStarted = false;
-
-const video = document.getElementById("videoPlayer");
-const flagsContainer = document.getElementById("flagsContainer");
+const flags = document.getElementById("flags");
 const playBtn = document.getElementById("playBtn");
 
-/* FLAGS */
+let videos = [];
+let current = 0;
+let started = false;
+
+/* 🔥 VIDEOLAR OLUŞTUR (PRELOAD READY) */
 videoList.forEach((v, i) => {
+  const vid = document.createElement("video");
+  vid.src = v.file;
+  vid.loop = true;
+  vid.playsInline = true;
+  vid.preload = "auto";
+
+  document.body.appendChild(vid);
+  videos.push(vid);
+
   const img = document.createElement("img");
   img.src = `https://flagcdn.com/w40/${v.flag}.png`;
   img.className = "flag" + (i === 0 ? " active" : "");
   img.onclick = () => switchVideo(i);
-  flagsContainer.appendChild(img);
+
+  flags.appendChild(img);
 });
 
-/* INIT */
-video.src = videoList[0].file;
-
-/* 🔥 PLAY (FIXED) */
+/* 🔥 PLAY */
 playBtn.onclick = async () => {
-  video.muted = false; // sesi aç
-  video.volume = 1;
+  started = true;
 
-  try {
-    await video.play();
-  } catch (e) {
-    // hazır değilse fallback
-    video.addEventListener("canplay", () => video.play(), { once: true });
+  for (let v of videos) {
+    v.muted = false;
+    v.volume = 1;
   }
 
+  await Promise.all(
+    videos.map(v =>
+      v.play().catch(() => {})
+    )
+  );
+
+  videos[0].classList.add("active");
   playBtn.classList.add("hidden");
-  hasStarted = true;
 };
 
-/* SWITCH */
-function switchVideo(index) {
-  if (index === currentIndex) return;
+/* 🔥 SWITCH (ANLIK) */
+function switchVideo(i) {
+  if (i === current) return;
 
-  video.src = videoList[index].file;
-  video.load();
-
-  if (hasStarted) {
-    video.addEventListener("loadeddata", () => {
-      video.play();
-    }, { once: true });
-  }
+  videos[current].classList.remove("active");
+  videos[i].classList.add("active");
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
-  flagsContainer.children[index].classList.add("active");
+  flags.children[i].classList.add("active");
 
-  currentIndex = index;
+  current = i;
 }
 </script>
 
