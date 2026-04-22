@@ -68,18 +68,9 @@ const video = document.getElementById("video");
 const playBtn = document.getElementById("playBtn");
 const flags = document.getElementById("flags");
 
-let current = 0;
+let audio = null;
 let started = false;
-
-/* 🎧 Web Audio setup */
-const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-const videoSource = ctx.createMediaElementSource(video);
-const videoGain = ctx.createGain();
-videoSource.connect(videoGain).connect(ctx.destination);
-
-let currentAudio = null;
-let currentGain = null;
+let current = 0;
 
 /* FLAGS */
 langs.forEach((l, i) => {
@@ -90,83 +81,110 @@ langs.forEach((l, i) => {
   flags.appendChild(img);
 });
 
-/* 🔥 CROSSFADE */
-function crossfade(oldGain, newGain, duration = 0.4) {
-  const now = ctx.currentTime;
+/* 🔥 FADE (SADECE AUDIO İÇİN) */
+function fadeOutAudio(media, duration = 300) {
+  return new Promise(resolve => {
+    if (!media) return resolve();
 
-  if (oldGain) {
-    oldGain.gain.cancelScheduledValues(now);
-    oldGain.gain.setValueAtTime(oldGain.gain.value, now);
-    oldGain.gain.linearRampToValueAtTime(0, now + duration);
-  }
+    const step = 30;
+    const volStep = media.volume / (duration / step);
 
-  newGain.gain.setValueAtTime(0, now);
-  newGain.gain.linearRampToValueAtTime(1, now + duration);
+    const i = setInterval(() => {
+      if (media.volume > volStep) {
+        media.volume -= volStep;
+      } else {
+        media.volume = 0;
+        media.pause();
+        clearInterval(i);
+        resolve();
+      }
+    }, step);
+  });
+}
+
+function fadeInAudio(media, duration = 300) {
+  return new Promise(resolve => {
+    media.volume = 0;
+
+    const step = 30;
+    const volStep = 1 / (duration / step);
+
+    const i = setInterval(() => {
+      if (media.volume < 1 - volStep) {
+        media.volume += volStep;
+      } else {
+        media.volume = 1;
+        clearInterval(i);
+        resolve();
+      }
+    }, step);
+  });
 }
 
 /* 🔥 PLAY */
 playBtn.onclick = async () => {
-  await ctx.resume();
+  try {
+    video.muted = !langs[current].audioFromVideo;
+    await video.play();
 
-  await video.play();
+    if (!langs[current].audioFromVideo) {
+      audio = new Audio(langs[current].file);
+      audio.currentTime = video.currentTime;
+      await audio.play();
+      fadeInAudio(audio);
+    }
 
-  video.muted = true; // sesi WebAudio yönetecek
+    started = true;
+    playBtn.classList.add("hidden");
 
-  // başlangıç TR
-  videoGain.gain.value = 1;
-
-  started = true;
-  playBtn.classList.add("hidden");
+  } catch (e) {
+    console.error("PLAY ERROR:", e);
+  }
 };
 
 /* 🔥 SYNC */
 video.addEventListener("timeupdate", () => {
-  if (!currentAudio) return;
-  if (Math.abs(video.currentTime - currentAudio.currentTime) > 0.2) {
-    currentAudio.currentTime = video.currentTime;
+  if (!audio) return;
+  if (Math.abs(video.currentTime - audio.currentTime) > 0.25) {
+    audio.currentTime = video.currentTime;
   }
 });
 
-/* 🔥 SWITCH (GERÇEK CROSSFade) */
+/* 🔥 SWITCH (TAKILMASIZ) */
 async function switchLang(i) {
   if (i === current) return;
 
   const lang = langs[i];
 
-  let newAudio = null;
-  let newGain = ctx.createGain();
+  // 🎯 SADECE AUDIO FADE OUT
+  await fadeOutAudio(audio);
 
   if (lang.audioFromVideo) {
-    // 🎯 video sesi aktif
-    newGain = videoGain;
+    // 🇹🇷 video sesi
+    video.muted = false;
+
+    if (audio) audio.pause();
+    audio = null;
+
   } else {
-    // 🎯 yeni mp3
-    newAudio = new Audio(lang.file);
+    // 🌍 mp3
+    video.muted = true;
+
+    const newAudio = new Audio(lang.file);
     newAudio.currentTime = video.currentTime;
 
-    const source = ctx.createMediaElementSource(newAudio);
-    source.connect(newGain).connect(ctx.destination);
+    if (started) {
+      await newAudio.play();
+      fadeInAudio(newAudio);
+    }
 
-    if (started) await newAudio.play();
+    audio = newAudio;
   }
-
-  // 🔥 crossfade
-  crossfade(
-    currentGain || videoGain,
-    newGain
-  );
-
-  // eski audioyu sonra durdur
-  setTimeout(() => {
-    if (currentAudio) currentAudio.pause();
-  }, 500);
-
-  currentAudio = newAudio;
-  currentGain = newGain;
-  current = i;
 
   document.querySelectorAll(".flag").forEach(f => f.classList.remove("active"));
   flags.children[i].classList.add("active");
+
+  current = i;
 }
 </script>
 
