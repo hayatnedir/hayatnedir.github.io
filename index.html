@@ -89,7 +89,7 @@ video {
 
 <script>
 const langs = [
-  { code: "tr", file: "tur.mp4", audioFromVideo: true }, // 🔥 TR = video audio
+  { code: "tr", file: "tur.mp4", audioFromVideo: true },
   { code: "us", file: "eng.mp3" },
   { code: "fr", file: "fr.mp3" },
   { code: "es", file: "spa.mp3" },
@@ -117,18 +117,61 @@ langs.forEach((l, i) => {
   flags.appendChild(img);
 });
 
+/* 🔥 FADE FUNCTIONS */
+function fadeOut(media, duration = 400) {
+  return new Promise(resolve => {
+    if (!media) return resolve();
+
+    const step = 50;
+    const volumeStep = media.volume / (duration / step);
+
+    const fade = setInterval(() => {
+      if (media.volume > volumeStep) {
+        media.volume -= volumeStep;
+      } else {
+        media.volume = 0;
+        media.pause();
+        clearInterval(fade);
+        resolve();
+      }
+    }, step);
+  });
+}
+
+function fadeIn(media, duration = 400) {
+  return new Promise(resolve => {
+    media.volume = 0;
+
+    const step = 50;
+    const volumeStep = 1 / (duration / step);
+
+    const fade = setInterval(() => {
+      if (media.volume < 1 - volumeStep) {
+        media.volume += volumeStep;
+      } else {
+        media.volume = 1;
+        clearInterval(fade);
+        resolve();
+      }
+    }, step);
+  });
+}
+
 /* 🔥 PLAY */
 playBtn.onclick = async () => {
   try {
-    // 🔥 Başlangıçta dil kontrolü
     video.muted = !langs[current].audioFromVideo;
+    video.volume = 0;
 
     await video.play();
+    await fadeIn(video);
 
     if (!langs[current].audioFromVideo) {
       audio = new Audio(langs[current].file);
       audio.currentTime = video.currentTime;
+
       await audio.play();
+      await fadeIn(audio);
     }
 
     started = true;
@@ -139,7 +182,7 @@ playBtn.onclick = async () => {
   }
 };
 
-/* 🔥 SYNC (sadece mp3 varsa) */
+/* 🔥 SYNC */
 video.addEventListener("timeupdate", () => {
   if (!audio) return;
   if (started && Math.abs(video.currentTime - audio.currentTime) > 0.25) {
@@ -147,27 +190,35 @@ video.addEventListener("timeupdate", () => {
   }
 });
 
-/* 🔥 SWITCH */
-function switchLang(i) {
+/* 🔥 SWITCH (FADE'li) */
+async function switchLang(i) {
   if (i === current) return;
 
   const lang = langs[i];
 
-  // 🔥 Eğer Türkçe ise video sesi AÇIK
+  // eski sesi yumuşak kapat
+  await fadeOut(audio || video);
+
   if (lang.audioFromVideo) {
+    // 🇹🇷 video sesi
     video.muted = false;
+    video.volume = 0;
 
     if (audio) audio.pause();
     audio = null;
 
+    await fadeIn(video);
+
   } else {
-    // 🔥 Diğer dillerde video sesi KAPALI
+    // 🌍 mp3
     video.muted = true;
 
     const newAudio = new Audio(lang.file);
     newAudio.currentTime = video.currentTime;
 
-    if (started) newAudio.play();
+    if (started) await newAudio.play();
+
+    await fadeIn(newAudio);
 
     if (audio) audio.pause();
     audio = newAudio;
