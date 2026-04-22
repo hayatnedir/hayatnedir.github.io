@@ -120,11 +120,11 @@ langs.forEach((l, i) => {
 /* 🔥 PLAY */
 playBtn.onclick = async () => {
   try {
-    video.muted = false;
+    // 🔥 Başlangıçta dil kontrolü
+    video.muted = !langs[current].audioFromVideo;
 
     await video.play();
 
-    // 🔥 TR = video audio kullan
     if (!langs[current].audioFromVideo) {
       audio = new Audio(langs[current].file);
       audio.currentTime = video.currentTime;
@@ -153,11 +153,17 @@ function switchLang(i) {
 
   const lang = langs[i];
 
-  // TR ise audio yok
+  // 🔥 Eğer Türkçe ise video sesi AÇIK
   if (lang.audioFromVideo) {
+    video.muted = false;
+
     if (audio) audio.pause();
     audio = null;
+
   } else {
+    // 🔥 Diğer dillerde video sesi KAPALI
+    video.muted = true;
+
     const newAudio = new Audio(lang.file);
     newAudio.currentTime = video.currentTime;
 
